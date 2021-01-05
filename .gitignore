@@ -69,7 +69,6 @@ buildNumber.properties
 out
 gen### Python template
 __pycache__/
-*.py[cod]
 *$py.class
 *.so
 .Python
@@ -130,7 +129,6 @@ venv.bak/
 /site
 .mypy_cache/
 .metadata
-bin/
 tmp/
 *.tmp
 *.bak
