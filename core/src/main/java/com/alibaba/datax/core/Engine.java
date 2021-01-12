@@ -17,7 +17,6 @@ import com.alibaba.datax.core.util.container.LoadUtil;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +25,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.apache.commons.lang3.StringUtils.endsWithIgnoreCase;
 
 /**
  * Engine是DataX入口类，该类负责初始化Job或者Task的运行容器，并运行插件的Job或者Task逻辑
@@ -36,15 +37,17 @@ public class Engine {
     
     private static String RUNTIME_MODE;
     
-    /* check job model (job/task) first */
+    /**
+     * check job model (job/task) first
+     *
+     * @param allConf Configuration
+     */
     public void start(Configuration allConf) {
         
         // 绑定column转换信息
         ColumnCast.bind(allConf);
         
-        /**
-         * 初始化PluginLoader，可以获取各种插件配置
-         */
+        //初始化PluginLoader，可以获取各种插件配置
         LoadUtil.bind(allConf);
         
         boolean isJob = !("taskGroup".equalsIgnoreCase(allConf.getString(CoreConstant.DATAX_CORE_CONTAINER_MODEL)));
@@ -57,7 +60,6 @@ public class Engine {
             allConf.set(CoreConstant.DATAX_CORE_CONTAINER_JOB_MODE, RUNTIME_MODE);
             container = new JobContainer(allConf);
             instanceId = allConf.getLong(CoreConstant.DATAX_CORE_CONTAINER_JOB_ID, 0);
-            
         } else {
             container = new TaskGroupContainer(allConf);
             instanceId = allConf.getLong(CoreConstant.DATAX_CORE_CONTAINER_JOB_ID);
@@ -69,7 +71,7 @@ public class Engine {
         boolean traceEnable = allConf.getBool(CoreConstant.DATAX_CORE_CONTAINER_TRACE_ENABLE, true);
         boolean perfReportEnable = allConf.getBool(CoreConstant.DATAX_CORE_REPORT_DATAX_PERFLOG, true);
         
-        //standlone模式的datax shell任务不进行汇报
+        //standlone模式的 datax shell任务不进行汇报
         if (instanceId == -1) {
             perfReportEnable = false;
         }
@@ -78,7 +80,8 @@ public class Engine {
         try {
             priority = Integer.parseInt(System.getenv("SKYNET_PRIORITY"));
         } catch (NumberFormatException e) {
-            LOG.warn("prioriy set to 0, because NumberFormatException, the value is: " + System.getProperty("PROIORY"));
+            LOG.warn("priority set to 0, because NumberFormatException, the value is: {}",
+                    System.getProperty("PROIORY"));
         }
         
         Configuration jobInfoConfig = allConf.getConfiguration(CoreConstant.DATAX_JOB_JOBINFO);
@@ -92,35 +95,37 @@ public class Engine {
     /**
      * 过滤job配置信息
      *
-     * @param configuration
-     * @return
+     * @param configuration Configuration
+     * @return String
      */
     public static String filterJobConfiguration(final Configuration configuration) {
         Configuration jobConfWithSetting = configuration.getConfiguration("job").clone();
         Configuration jobContent = jobConfWithSetting.getConfiguration("content");
-        filterSensitiveConfiguration(jobContent);
-        jobConfWithSetting.set("content", jobContent);
+        jobConfWithSetting.set("content", filterSensitiveConfiguration(jobContent));
         return jobConfWithSetting.beautify();
     }
     
     /**
      * 屏蔽敏感信息
      *
-     * @param configuration
-     * @return
+     * @param conf Configuration
+     * @return Configuration
      */
-    public static Configuration filterSensitiveConfiguration(Configuration configuration) {
-        Set<String> keys = configuration.getKeys();
+    public static Configuration filterSensitiveConfiguration(Configuration conf) {
+        Set<String> keys = conf.getKeys();
         for (final String key : keys) {
-            boolean isSensitive =
-                    StringUtils.endsWithIgnoreCase(key, "password") || StringUtils.endsWithIgnoreCase(key, "accessKey");
-            if (isSensitive && configuration.get(key) instanceof String) {
-                configuration.set(key, configuration.getString(key).replaceAll(".", "*"));
+            boolean isSensitive = endsWithIgnoreCase(key, "password") || endsWithIgnoreCase(key, "accessKey");
+            if (isSensitive && conf.get(key) instanceof String) {
+                conf.set(key, conf.getString(key).replaceAll(".", "*"));
             }
         }
-        return configuration;
+        return conf;
     }
     
+    /**
+     * @param args String[]
+     * @throws Throwable
+     */
     public static void entry(final String[] args) throws Throwable {
         Options options = new Options();
         options.addOption("job", true, "Job config.");
@@ -135,16 +140,16 @@ public class Engine {
         RUNTIME_MODE = cl.getOptionValue("mode");
         Configuration configuration = ConfigParser.parse(jobPath);
         long jobId;
-        if (!"-1".equalsIgnoreCase(jobIdString)) {
+        String defaultJobId = "-1";
+        if (!defaultJobId.equals(jobIdString)) {
             jobId = Long.parseLong(jobIdString);
         } else {
             // only for dsc & ds & datax 3 update
-            String dscJobUrlPatternString = "/instance/(\\d{1,})/config.xml";
-            String dsJobUrlPatternString = "/inner/job/(\\d{1,})/config";
-            String dsTaskGroupUrlPatternString = "/inner/job/(\\d{1,})/taskGroup/";
-            List<String> patternStringList = Arrays
-                    .asList(dscJobUrlPatternString, dsJobUrlPatternString, dsTaskGroupUrlPatternString);
-            jobId = parseJobIdFromUrl(patternStringList, jobPath);
+            String dscJobUrlPatternStr = "/instance/(\\d{1,})/config.xml";
+            String dsJobUrlPatternStr = "/inner/job/(\\d{1,})/config";
+            String dsTaskGroupUrlPatternStr = "/inner/job/(\\d{1,})/taskGroup/";
+            List<String> patterns = Arrays.asList(dscJobUrlPatternStr, dsJobUrlPatternStr, dsTaskGroupUrlPatternStr);
+            jobId = parseJobIdFromUrl(patterns, jobPath);
         }
         
         boolean isStandAloneMode = "standalone".equalsIgnoreCase(RUNTIME_MODE);
@@ -190,17 +195,16 @@ public class Engine {
         if (matcher.find()) {
             return Long.parseLong(matcher.group(1));
         }
-        
         return -1;
     }
     
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         int exitCode = 0;
         try {
             Engine.entry(args);
         } catch (Throwable e) {
             exitCode = 1;
-            LOG.error("\n\n经DataX智能分析,该任务最可能的错误原因是:\n" + ExceptionTracker.trace(e));
+            LOG.error("\n\n经DataX智能分析,该任务最可能的错误原因是:\n {}", ExceptionTracker.trace(e));
             if (e instanceof DataXException) {
                 DataXException tempException = (DataXException) e;
                 ErrorCode errorCode = tempException.getErrorCode();
