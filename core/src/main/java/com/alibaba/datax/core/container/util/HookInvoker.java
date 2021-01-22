@@ -10,18 +10,16 @@ import com.alibaba.datax.common.spi.Hook;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.core.util.FrameworkErrorCode;
 import com.alibaba.datax.core.util.container.JarLoader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
-import java.io.FilenameFilter;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.ServiceLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 扫描给定目录的所有一级子目录，每个子目录当作一个Hook的目录。 对于每个子目录，必须符合ServiceLoader的标准目录格式，见http://docs.oracle.com/javase/6/docs/api/java/util/ServiceLoader.html。
+ * 扫描给定目录的所有一级子目录，每个子目录当作一个Hook的目录。 对于每个子目录，必须符合ServiceLoader的标准目录格式，
+ * 见http://docs.oracle.com/javase/6/docs/api/java/util/ServiceLoader.html。
  * 加载里头的jar，使用ServiceLoader机制调用。
  */
 public class HookInvoker {
@@ -38,6 +36,9 @@ public class HookInvoker {
     this.msg = msg;
   }
 
+  /**
+   * 总体调用的方法
+   */
   public void invokeAll() {
     if (!baseDir.exists() || baseDir.isFile()) {
       LOG.info("No hook invoked, because base dir not exists or is a file: " + baseDir
@@ -55,6 +56,13 @@ public class HookInvoker {
     }
   }
 
+  /**
+   * 子调用方法。主要是加在该路径下得 class <br/> 1 先将当前classLoader暂存 <br/> 2 根据入参路径得到一个jarLoader <br/> 3
+   * 将当前线程的上下文类加载器设置为2中的jarLoader <br/> 4 使用 ServiceLoader获取 hook列表，然后循环调用 <br/> 5 恢复当前线程的类加载器
+   * <br/>
+   *
+   * @param path String
+   */
   private void doInvoke(String path) {
     ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
     try {
@@ -76,5 +84,6 @@ public class HookInvoker {
       Thread.currentThread().setContextClassLoader(oldClassLoader);
     }
   }
+
 
 }

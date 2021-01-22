@@ -13,13 +13,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 容器通信器，
+ * 抽象类 容器通信器，
+ * 处理JobContainer、TaskGroupContainer和Task的通讯
  */
 public abstract class AbstractContainerCommunicator {
 
 
   private Configuration configuration;
+
+  /**
+   * Collector负责管理下级注册到上级，搜集并合并下级所有的信息
+   */
   private AbstractCollector collector;
+
   private AbstractReporter reporter;
 
   private Long jobId;
@@ -69,9 +75,12 @@ public abstract class AbstractContainerCommunicator {
 
   public abstract Communication getCommunication(Integer id);
 
+
   /**
-   * <p/>当 实现是 TGContainerCommunicator 时，返回的 Map: key=taskId, value=Communication 当 实现是
-   * JobContainerCommunicator 时，返回的 Map: key=taskGroupId, value=Communication
+   * 当 实现是 TGContainerCommunicator 时，返回的 Map: key=taskId, value=Communication <br/>
+   * 当 实现是 JobContainerCommunicator 时，返回的 Map: key=taskGroupId, value=Communication
+   *
+   * @return Map<Integer, Communication>
    */
   public abstract Map<Integer, Communication> getCommunicationMap();
 
