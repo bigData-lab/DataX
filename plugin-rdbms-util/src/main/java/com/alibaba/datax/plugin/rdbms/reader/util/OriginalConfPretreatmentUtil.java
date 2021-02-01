@@ -204,8 +204,7 @@ public final class OriginalConfPretreatmentUtil {
       }
     } else {
       // querySql模式，不希望配制 column，那样是混淆不清晰的
-      if (null != userConfiguredColumns
-          && userConfiguredColumns.size() > 0) {
+      if (null != userConfiguredColumns && userConfiguredColumns.size() > 0) {
         LOG.warn(
             "您的配置有误. 由于您读取数据库表采用了querySql的方式, 所以您不需要再配置 column. 如果您不想看到这条提醒，请移除您源头表中配置中的 column.");
         originalConfig.remove(Key.COLUMN);
@@ -227,7 +226,6 @@ public final class OriginalConfPretreatmentUtil {
         originalConfig.remove(Key.SPLIT_PK);
       }
     }
-
   }
 
   private static boolean recognizeTableOrQuerySqlMode(

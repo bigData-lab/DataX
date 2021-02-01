@@ -155,7 +155,7 @@ public class SingleTableSplitUtil {
     return minMaxPK;
   }
 
-  public static void precheckSplitPk(Connection conn, String pkRangeSQL, int fetchSize,
+  public static void preCheckSplitPk(Connection conn, String pkRangeSQL, int fetchSize,
       String table, String username) {
     Pair<Object, Object> minMaxPK = checkSplitPk(conn, pkRangeSQL, fetchSize, table, username,
         null);
